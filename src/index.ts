@@ -10,7 +10,7 @@ import {
 const app = express();
 app.use(express.json());
 
-const port = 3000;
+const port = 8080;
 
 export const connection = mysql.createConnection({
   host: "localhost",
@@ -22,7 +22,7 @@ export const connection = mysql.createConnection({
 connection.connect();
 
 app.get("/", (req, res) => {
-  res.send("Welcome to lofi moods api");
+  res.send({ welcome: "Welcome to lofi moods api", status: "running" });
 });
 
 ///       CREATE
