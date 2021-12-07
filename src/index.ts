@@ -28,15 +28,36 @@ app.get("/", (req, res) => {
 
 ///       CREATE
 app.post("/addMusic", (req, res) => {
-  req.body.forEach((item: music) => insertIntoDb(item));
+  let musics: Array<music> = req.body;
+  let processedResponse: Array<apiResponse<music>> = [];
 
-  function insertIntoDb(item: music) {
-    connection.query(
-      `INSERT INTO music(title, owner, link, mood) VALUES('${item.title}', '${item.owner}', '${item.owner}', '${item.mood}')`,
-      (error, results, fields) => {
-        if (error) throw error;
-        res.send(results);
-      }
+  musics.forEach(async (item: music, index: number) => {
+    let inserting = await insertIntoDb(item);
+    if (inserting.error) {
+      processedResponse.push({
+        success: false,
+        message: "music not added",
+        data: item,
+      });
+    } else {
+      processedResponse.push({
+        success: true,
+        message: "music added",
+        data: item,
+      });
+    }
+    if (index === musics.length - 1) {
+      res.send(processedResponse);
+    }
+  });
+
+  async function insertIntoDb(item: music): Promise<apiQueryResponse> {
+    return new Promise((resolve) =>
+      connection.query(
+        `INSERT INTO music(title, owner, link, mood) VALUES('${item.title}', '${item.owner}', '${item.owner}', '${item.mood}')`,
+        (error, results, fields) =>
+          resolve({ error: error, results: results, fields: fields })
+      )
     );
   }
 });
