@@ -1,5 +1,6 @@
 import express from "express";
 import mysql from "mysql";
+import { send } from "process";
 import util from "util";
 import {
   apiQueryResponse,
@@ -27,7 +28,7 @@ app.get("/", (req, res) => {
 });
 
 ///       CREATE
-app.post("/addMusic", (req, res) => {
+app.put("/addMusic", (req, res) => {
   let musics: Array<music> = req.body;
   let processedResponse: Array<apiResponse<music>> = [];
 
@@ -43,7 +44,7 @@ app.post("/addMusic", (req, res) => {
       processedResponse.push({
         success: true,
         message: "music added",
-        data: item,
+        data: { id: inserting.results.insertId, ...item },
       });
     }
     if (index === musics.length - 1) {
@@ -97,32 +98,33 @@ app.get("/getMusic", async (req, res) => {
 app.post("/updateMusic", async (req, res) => {
   let item: music = req.body;
 
-  let response: apiQueryResponse = {
-    error: null,
-    results: "",
-    fields: undefined,
-  };
+  let response: Array<apiQueryResponse> = [];
 
-  let processedResponse: apiResponse<undefined>;
+  let processedResponse: apiResponse<Array<any>>;
   let success = true;
 
   Object.keys(item).forEach(async (key: string, index: number) => {
-    if ((await updateColumn(key as musicProps, item)).error) {
-      success = false;
+    if (item[key as musicProps] !== "id") {
+      let updating = await updateColumn(key as musicProps, item);
+      console.log(updating.error);
+      if (updating.error !== null) {
+        success = false;
+      }
+      response.push(updating);
     }
   });
 
-  if (response) {
+  if (!success) {
     processedResponse = {
       success: false,
-      message: "failed to update fields",
-      data: undefined,
+      message: "something went wrong",
+      data: response.map((item) => item.results),
     };
   } else {
     processedResponse = {
       success: true,
       message: "fields updated",
-      data: undefined,
+      data: response.map((item) => item.results),
     };
   }
 
@@ -140,6 +142,33 @@ app.post("/updateMusic", async (req, res) => {
       )
     );
   }
+});
+
+app.delete("/deleteMusic", async (req, res) => {
+  let id: number = req.body["id"];
+  let response: apiQueryResponse = await new Promise((resolve) =>
+    connection.query(
+      `DELETE FROM music WHERE id = ${id}`,
+      (error, results, fields) =>
+        resolve({ error: error, results: results, fields: fields })
+    )
+  );
+  let parsedResponse: apiResponse<number>;
+  if (response.error) {
+    parsedResponse = {
+      success: false,
+      message: "failed to delete music",
+      data: response.results,
+    };
+  } else {
+    parsedResponse = {
+      success: true,
+      message: "music deleted",
+      data: response.results,
+    };
+  }
+
+  res.send(parsedResponse);
 });
 
 app.listen(port, () => {
