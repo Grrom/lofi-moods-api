@@ -45,9 +45,16 @@ app.post("/addMusic", (req, res) => {
 app.get("/getMusic", async (req, res) => {
   let mood = req.query.mood as string;
 
-  let response: apiQueryResponse = await getMusic(mood);
+  let response: apiQueryResponse = await new Promise((resolve) => {
+    connection.query(
+      `SELECT * FROM music WHERE mood = '${mood}'`,
+      (error, results, fields) =>
+        resolve({ error: error, results: results, fields: fields })
+    );
+  });
 
   let processedResponse: apiResponse<Array<music>>;
+
   if (response.error) {
     processedResponse = {
       success: false,
@@ -63,18 +70,6 @@ app.get("/getMusic", async (req, res) => {
   }
 
   res.send(processedResponse);
-
-  async function getMusic(mood: string): Promise<apiQueryResponse> {
-    let prom: Promise<apiQueryResponse> = new Promise((resolve) => {
-      connection.query(
-        `SELECT * FROM music WHERE mood = '${mood}'`,
-        (error, results, fields) =>
-          resolve({ error: error, results: results, fields: fields })
-      );
-    });
-
-    return prom;
-  }
 });
 
 ///       UPDATE
