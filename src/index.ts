@@ -73,27 +73,52 @@ app.get("/getMusic", async (req, res) => {
 });
 
 ///       UPDATE
-app.post("/updateMusic", (req, res) => {
-  console.log("got post");
-  console.log(req.body);
-
+app.post("/updateMusic", async (req, res) => {
   let item: music = req.body;
 
-  Object.keys(item).forEach((key: string, index: number) => {
-    updateColumn(key as musicProps, item);
+  let response: apiQueryResponse = {
+    error: null,
+    results: "",
+    fields: undefined,
+  };
+
+  let processedResponse: apiResponse<undefined>;
+  let success = true;
+
+  Object.keys(item).forEach(async (key: string, index: number) => {
+    if ((await updateColumn(key as musicProps, item)).error) {
+      success = false;
+    }
   });
 
-  function updateColumn(toUpdate: musicProps, item: music) {
-    util;
-    connection.query(
-      `UPDATE music SET ${toUpdate} = '${item[toUpdate]}' WHERE id = ${item.id}`,
-      (error, results, fields) => {
-        if (error) throw error;
-      }
-    );
+  if (response) {
+    processedResponse = {
+      success: false,
+      message: "failed to update fields",
+      data: undefined,
+    };
+  } else {
+    processedResponse = {
+      success: true,
+      message: "fields updated",
+      data: undefined,
+    };
   }
 
-  res.send();
+  res.send(processedResponse);
+
+  async function updateColumn(
+    toUpdate: musicProps,
+    item: music
+  ): Promise<apiQueryResponse> {
+    return await new Promise((resolve) =>
+      connection.query(
+        `UPDATE music SET ${toUpdate} = '${item[toUpdate]}' WHERE id = ${item.id}`,
+        (error, results, fields) =>
+          resolve({ error: error, results: results, fields: fields })
+      )
+    );
+  }
 });
 
 app.listen(port, () => {
