@@ -1,7 +1,5 @@
 import express from "express";
 import mysql from "mysql";
-import { send } from "process";
-import util from "util";
 import {
   apiQueryResponse,
   apiResponse,
