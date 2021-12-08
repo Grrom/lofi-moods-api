@@ -1,5 +1,6 @@
 import express from "express";
 import mysql from "mysql";
+import cors from "cors";
 import {
   apiQueryResponse,
   apiResponse,
@@ -9,6 +10,7 @@ import {
 
 const app = express();
 app.use(express.json());
+app.use(cors());
 
 const port = 8080;
 
@@ -26,34 +28,55 @@ app.get("/", (req, res) => {
 });
 
 ///       CREATE
-app.put("/addMusic", (req, res) => {
-  let musics: Array<music> = req.body;
-  let processedResponse: Array<apiResponse<music>> = [];
+app.put("/addMusic", async (req, res) => {
+  // let musics: Array<music> = req.body;
+  // let processedResponse: Array<apiResponse<music>> = [];
 
-  musics.forEach(async (item: music, index: number) => {
-    let inserting = await insertIntoDb(item);
-    if (inserting.error) {
-      processedResponse.push({
-        success: false,
-        message: "music not added",
-        data: item,
-      });
-    } else {
-      processedResponse.push({
-        success: true,
-        message: "music added",
-        data: { id: inserting.results.insertId, ...item },
-      });
-    }
-    if (index === musics.length - 1) {
-      res.send(processedResponse);
-    }
-  });
+  let music: music = req.body;
+  let processedResponse: apiResponse<music>;
+
+  let inserting = await insertIntoDb(music);
+
+  if (inserting.error) {
+    processedResponse = {
+      success: false,
+      message: "music not added",
+      data: inserting.results,
+    };
+  } else {
+    processedResponse = {
+      success: true,
+      message: "music added",
+      data: { id: inserting.results.insertId, ...music },
+    };
+  }
+
+  res.send(processedResponse);
+
+  // musics.forEach(async (item: music, index: number) => {
+  //   let inserting = await insertIntoDb(item);
+  //   if (inserting.error) {
+  //     processedResponse.push({
+  //       success: false,
+  //       message: "music not added",
+  //       data: item,
+  //     });
+  //   } else {
+  //     processedResponse.push({
+  //       success: true,
+  //       message: "music added",
+  //       data: { id: inserting.results.insertId, ...item },
+  //     });
+  //   }
+  //   if (index === musics.length - 1) {
+  //     res.send(processedResponse);
+  //   }
+  // });
 
   async function insertIntoDb(item: music): Promise<apiQueryResponse> {
     return new Promise((resolve) =>
       connection.query(
-        `INSERT INTO music(title, owner, link, mood) VALUES('${item.title}', '${item.owner}', '${item.owner}', '${item.mood}')`,
+        `INSERT INTO music(title, owner, link, mood) VALUES('${item.title}', '${item.owner}', '${item.link}', '${item.mood}')`,
         (error, results, fields) =>
           resolve({ error: error, results: results, fields: fields })
       )
@@ -67,7 +90,7 @@ app.get("/getMusic", async (req, res) => {
 
   let response: apiQueryResponse = await new Promise((resolve) => {
     connection.query(
-      `SELECT * FROM music WHERE mood = '${mood}'`,
+      `SELECT * FROM music WHERE mood = '${mood}' ORDER BY dateCreated DESC`,
       (error, results, fields) =>
         resolve({ error: error, results: results, fields: fields })
     );
@@ -104,29 +127,28 @@ app.post("/updateMusic", async (req, res) => {
   Object.keys(item).forEach(async (key: string, index: number) => {
     if (item[key as musicProps] !== "id") {
       let updating = await updateColumn(key as musicProps, item);
-      console.log(updating.error);
       if (updating.error !== null) {
         success = false;
       }
       response.push(updating);
     }
+    if (index === Object.keys(item).length - 1) {
+      if (!success) {
+        processedResponse = {
+          success: false,
+          message: "something went wrong",
+          data: response.map((item) => item.results),
+        };
+      } else {
+        processedResponse = {
+          success: true,
+          message: "fields updated",
+          data: response.map((item) => item.results),
+        };
+      }
+      res.send(processedResponse);
+    }
   });
-
-  if (!success) {
-    processedResponse = {
-      success: false,
-      message: "something went wrong",
-      data: response.map((item) => item.results),
-    };
-  } else {
-    processedResponse = {
-      success: true,
-      message: "fields updated",
-      data: response.map((item) => item.results),
-    };
-  }
-
-  res.send(processedResponse);
 
   async function updateColumn(
     toUpdate: musicProps,
