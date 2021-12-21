@@ -4,6 +4,7 @@ import cors from "cors";
 import {
   apiQueryResponse,
   apiResponse,
+  mood,
   music,
   musicProps,
 } from "./types/types";
@@ -29,9 +30,6 @@ app.get("/", (req, res) => {
 
 ///       CREATE
 app.put("/addMusic", async (req, res) => {
-  // let musics: Array<music> = req.body;
-  // let processedResponse: Array<apiResponse<music>> = [];
-
   let music: music = req.body;
   let processedResponse: apiResponse<music>;
 
@@ -53,30 +51,43 @@ app.put("/addMusic", async (req, res) => {
 
   res.send(processedResponse);
 
-  // musics.forEach(async (item: music, index: number) => {
-  //   let inserting = await insertIntoDb(item);
-  //   if (inserting.error) {
-  //     processedResponse.push({
-  //       success: false,
-  //       message: "music not added",
-  //       data: item,
-  //     });
-  //   } else {
-  //     processedResponse.push({
-  //       success: true,
-  //       message: "music added",
-  //       data: { id: inserting.results.insertId, ...item },
-  //     });
-  //   }
-  //   if (index === musics.length - 1) {
-  //     res.send(processedResponse);
-  //   }
-  // });
-
   async function insertIntoDb(item: music): Promise<apiQueryResponse> {
     return new Promise((resolve) =>
       connection.query(
         `INSERT INTO music(title, owner, link, mood) VALUES('${item.title}', '${item.owner}', '${item.link}', '${item.mood}')`,
+        (error, results, fields) =>
+          resolve({ error: error, results: results, fields: fields })
+      )
+    );
+  }
+});
+
+app.put("/addMood", async (req, res) => {
+  let mood: string = req.body;
+  let processedResponse: apiResponse<mood>;
+
+  let inserting = await insertIntoDb(mood);
+
+  if (inserting.error) {
+    processedResponse = {
+      success: false,
+      message: "mood not added",
+      data: inserting.results,
+    };
+  } else {
+    processedResponse = {
+      success: true,
+      message: "mood added",
+      data: { id: inserting.results.insertId, mood: mood },
+    };
+  }
+
+  res.send(processedResponse);
+
+  async function insertIntoDb(mood: string): Promise<apiQueryResponse> {
+    return new Promise((resolve) =>
+      connection.query(
+        `INSERT INTO moods(mood) VALUES('${mood}')`,
         (error, results, fields) =>
           resolve({ error: error, results: results, fields: fields })
       )
@@ -108,6 +119,32 @@ app.get("/getMusic", async (req, res) => {
     processedResponse = {
       success: true,
       message: "query success",
+      data: response.results,
+    };
+  }
+
+  res.send(processedResponse);
+});
+
+app.get("/getMoods", async (req, res) => {
+  let response: apiQueryResponse = await new Promise((resolve) => {
+    connection.query(`SELECT mood FROM moods `, (error, results, fields) =>
+      resolve({ error: error, results: results, fields: fields })
+    );
+  });
+
+  let processedResponse: apiResponse<Array<string>>;
+
+  if (response.error) {
+    processedResponse = {
+      success: false,
+      message: "Failed to query moods",
+      data: response.results,
+    };
+  } else {
+    processedResponse = {
+      success: true,
+      message: "Moods queried successfully",
       data: response.results,
     };
   }
