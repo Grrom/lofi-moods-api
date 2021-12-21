@@ -9,10 +9,7 @@ export interface music {
   mood: string;
 }
 
-export interface mood {
-  id?: number;
-  mood: string;
-}
+export type mood = string;
 
 export interface apiResponse<T> {
   success: boolean;

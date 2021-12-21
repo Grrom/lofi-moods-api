@@ -63,7 +63,7 @@ app.put("/addMusic", async (req, res) => {
 });
 
 app.put("/addMood", async (req, res) => {
-  let mood: string = req.body;
+  let mood: string = req.body.mood;
   let processedResponse: apiResponse<mood>;
 
   let inserting = await insertIntoDb(mood);
@@ -78,7 +78,7 @@ app.put("/addMood", async (req, res) => {
     processedResponse = {
       success: true,
       message: "mood added",
-      data: { id: inserting.results.insertId, mood: mood },
+      data: mood,
     };
   }
 
@@ -128,7 +128,7 @@ app.get("/getMusic", async (req, res) => {
 
 app.get("/getMoods", async (req, res) => {
   let response: apiQueryResponse = await new Promise((resolve) => {
-    connection.query(`SELECT mood FROM moods `, (error, results, fields) =>
+    connection.query(`SELECT * FROM moods `, (error, results, fields) =>
       resolve({ error: error, results: results, fields: fields })
     );
   });
@@ -145,7 +145,7 @@ app.get("/getMoods", async (req, res) => {
     processedResponse = {
       success: true,
       message: "Moods queried successfully",
-      data: response.results,
+      data: response.results.map((result: { mood: mood }) => result.mood),
     };
   }
 
