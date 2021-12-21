@@ -228,6 +228,34 @@ app.delete("/deleteMusic", async (req, res) => {
   res.send(parsedResponse);
 });
 
+app.delete("/deleteMood", async (req, res) => {
+  let mood: mood = req.body["mood"];
+  let response: apiQueryResponse = await new Promise((resolve) => {
+    connection.query(`DELETE FROM music WHERE mood = '${mood}'`);
+    connection.query(
+      `DELETE FROM moods WHERE mood = '${mood}'`,
+      (error, results, fields) =>
+        resolve({ error: error, results: results, fields: fields })
+    );
+  });
+  let parsedResponse: apiResponse<number>;
+  if (response.error) {
+    parsedResponse = {
+      success: false,
+      message: "failed to delete mood",
+      data: response.results,
+    };
+  } else {
+    parsedResponse = {
+      success: true,
+      message: "mood deleted",
+      data: response.results,
+    };
+  }
+
+  res.send(parsedResponse);
+});
+
 app.listen(port, () => {
   console.log("listening on " + "http://localhost:" + port);
 });
